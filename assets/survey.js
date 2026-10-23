@@ -9,7 +9,7 @@ function renderLanding(error = '', prefill = '') {
       <div class="hero" style="margin:0">
         <div class="eyebrow">Archetype placement</div>
         <h1>Welcome</h1>
-        <p>Please enter the personal ID you received to start.</p>
+        <p>Please enter your participant ID to start. If you come back later, use the same ID to continue where you left off.</p>
       </div>
       <form id="idForm" class="id-form">
         <input type="text" id="idInput" name="id" autocomplete="off" spellcheck="false"
@@ -61,7 +61,7 @@ function renderMessage(title, text) {
 }
 
 function whoLine() {
-  return `<p class="who">Signed in with ID <strong>${esc(state.code)}</strong> · <button type="button" data-switch>Use a different ID</button></p>`;
+  return `<p class="who">Your ID: <strong>${esc(state.code)}</strong> · <button type="button" data-switch>Use a different ID</button></p>`;
 }
 function bindWho() {
   app.querySelector('[data-switch]')?.addEventListener('click', () => {

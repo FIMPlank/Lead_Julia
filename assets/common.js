@@ -46,7 +46,7 @@ function shortValue(v, count) {
 }
 
 const ERROR_TEXT = {
-  invalid_code: 'This ID is not known. Please check it and try again.',
+  invalid_code: 'Please enter an ID with 2 to 60 characters.',
   already_submitted: 'Your answers have already been submitted.',
   survey_closed: 'The survey is currently closed.',
   incomplete: 'Please place every case before submitting.',

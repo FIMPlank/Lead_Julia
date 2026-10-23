@@ -11,8 +11,8 @@ All database objects are prefixed `arch_` so they don't clash with the other app
 
 | Page | Who | What |
 |---|---|---|
-| `index.html` | Participants | Enter ID (or open `index.html?id=ABC123`), place each case, submit. Answers autosave. |
-| `admin.html` | Admins | **Results**: heat map, mean/median/SD, individual table, notes, CSV export. **Participants**: generate IDs, copy links. **Survey setup**: title, intro, slider step, archetypes, cases. |
+| `index.html` | Participants | Enter your own ID (2–60 characters; created on first use, case-insensitive), place each case, submit. Answers autosave; the same ID continues later. |
+| `admin.html` | Admins | **Results**: heat map, mean/median/SD, individual table, notes, CSV export. **Participants**: see who started/submitted, add labels, reopen or clear. **Survey setup**: title, intro, slider step, archetypes, cases. |
 
 ## Slider values
 
@@ -20,15 +20,6 @@ A position runs from `0` (first archetype) to `5` (sixth). `2.25` means 75% C, 2
 Slider movement is set in Survey setup: free (continuous), quarter steps, half steps, or archetypes only.
 Each answer also stores `scale_max` (number of archetypes − 1 at the time), so answers stay
 interpretable if the archetype count changes later.
-
-## Admin setup (one-time)
-
-1. Supabase dashboard → Authentication → Users → **Add user** (email + password, auto-confirm).
-2. SQL editor:
-   ```sql
-   insert into arch_admins(email) values ('you@example.com');
-   ```
-3. Open `admin.html` and sign in.
 
 ## Run locally
 
@@ -40,12 +31,13 @@ Then open http://localhost:5173/ (survey) or http://localhost:5173/admin.html.
 
 ## Hosting
 
-Any static host works (GitHub Pages, Netlify, …). Participant links are built from the admin page's
-own URL, so generate and copy links from the hosted admin page.
+Live on GitHub Pages: https://fimplank.github.io/Lead_Julia/ (admin: `/admin.html`).
 
-## Security model
+## Access model
 
-- Participants never read tables directly. They call `arch_get_survey`, `arch_save_response` and
-  `arch_submit`, which check the ID and only return or change that participant's own answers.
-- Admin access is Supabase Auth + the `arch_admins` email allowlist, enforced by row-level security.
+- Participants use the ID-checked RPCs `arch_get_survey`, `arch_save_response` and `arch_submit`.
+- The admin page has **no login** by choice (internal research use). The `arch_` tables are readable and
+  editable with the public browser key, so anyone who has the site address or the key can view or change
+  the data. Export CSVs regularly as a backup.
 - Schema lives in `supabase/migrations/`.
+

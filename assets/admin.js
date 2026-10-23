@@ -1,7 +1,6 @@
 // Admin dashboard: edit the survey, manage participant IDs, view results.
 const app = document.getElementById('app');
 const A = {
-  user: null,
   tab: safeStorage('get', 'arch_admin_tab') || 'results',
   settings: null, archetypes: [], cases: [], participants: [], responses: [],
   view: { filter: 'submitted', bin: 0.25 },
@@ -74,56 +73,16 @@ document.addEventListener('mousemove', (e) => {
   tip.style.top = y + 'px';
 });
 
-// ---------- auth ----------
-function renderLogin(error = '') {
-  app.innerHTML = `
-    <section class="landing card">
-      <div class="hero" style="margin:0">
-        <div class="eyebrow">Admin</div>
-        <h1>Sign in</h1>
-        <p>Use the admin account set up in Supabase.</p>
-      </div>
-      <form id="loginForm" class="stack" style="margin-top:18px">
-        <label class="field"><span>Email</span><input type="email" name="email" autocomplete="username" required></label>
-        <label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label>
-        <button class="btn primary" type="submit">Sign in</button>
-      </form>
-      ${error ? `<p class="notice error" style="margin-top:14px">${esc(error)}</p>` : ''}
-    </section>`;
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const btn = e.target.querySelector('button');
-    btn.disabled = true; btn.textContent = 'Signing in…';
-    const { error: err } = await sb.auth.signInWithPassword({ email: f.get('email'), password: f.get('password') });
-    if (err) renderLogin(err.message); else start();
-  });
-}
-
+// ---------- start ----------
 async function start() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) return renderLogin();
-  A.user = session.user;
-  const { data: isAdmin, error } = await sb.rpc('arch_is_admin');
-  if (error || !isAdmin) {
-    app.innerHTML = `
-      <section class="landing card stack">
-        <h1>No admin access</h1>
-        <p class="muted">You are signed in as <strong>${esc(A.user.email)}</strong>, but this account is not on the admin list.</p>
-        <p class="muted small">Add it in the Supabase SQL editor:<br><code>insert into arch_admins(email) values ('${esc(A.user.email)}');</code></p>
-        <div class="row"><button class="btn" id="out">Sign out</button></div>
-      </section>`;
-    document.getElementById('out').onclick = signOut;
+  app.innerHTML = '<p class="muted">Loading data…</p>';
+  try {
+    await loadAll();
+  } catch (err) {
+    app.innerHTML = `<section class="landing card"><h1>Could not load data</h1><p class="notice error" style="margin-top:12px">${esc(err.message)}</p></section>`;
     return;
   }
-  app.innerHTML = '<p class="muted">Loading data…</p>';
-  await loadAll();
   renderShell();
-}
-
-async function signOut() {
-  await sb.auth.signOut();
-  renderLogin();
 }
 
 async function loadAll() {
@@ -156,14 +115,14 @@ function renderShell() {
       <span class="spacer"></span>
       <span class="pill ${A.settings.is_open ? 'ok' : 'warn'}">${A.settings.is_open ? 'Survey open' : 'Survey closed'}</span>
       <button class="btn sm" id="reload" type="button">Refresh</button>
+      <button class="btn sm" id="copySurvey" type="button">Copy survey link</button>
       <a class="btn sm" href="index.html" target="_blank" rel="noopener">Open survey ↗</a>
-      <button class="btn sm ghost" id="out" type="button" title="${esc(A.user.email)}">Sign out</button>
     </div>
     <div class="tabs" role="tablist">
       ${TABS.map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${A.tab === k}">${l}</button>`).join('')}
     </div>
     <section id="tabBody"></section>`;
-  document.getElementById('out').onclick = signOut;
+  document.getElementById('copySurvey').onclick = () => copyText(new URL('index.html', location.href).href, 'Survey link copied');
   document.getElementById('reload').onclick = async () => { await loadAll(); renderShell(); toast('Refreshed'); };
   app.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
     A.tab = b.dataset.tab;
@@ -379,13 +338,6 @@ function exportWide(codes) {
 }
 
 // ---------- participants ----------
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-function randomCode(len = 6) {
-  const buf = new Uint32Array(len);
-  crypto.getRandomValues(buf);
-  return Array.from(buf, (x) => CODE_ALPHABET[x % CODE_ALPHABET.length]).join('');
-}
-
 function participantStatus(p) {
   const n = answersOf(p.code).length;
   const total = activeCases().length;
@@ -397,30 +349,9 @@ function participantStatus(p) {
 
 function renderParticipants(body) {
   body.innerHTML = `
-    <div class="card" style="margin-bottom:18px">
-      <div class="section-head"><div><h2>Add participant IDs</h2><p>Each participant gets a personal ID and link. Random IDs are hard to guess.</p></div></div>
-      <div class="form-grid">
-        <form id="genForm" class="stack">
-          <h3>Generate random IDs</h3>
-          <div class="row" style="align-items:flex-end">
-            <label class="field" style="width:90px"><span>How many</span><input type="number" name="count" min="1" max="200" value="10" required></label>
-            <label class="field" style="flex:1;min-width:120px"><span>Prefix (optional)</span><input type="text" name="prefix" maxlength="12" placeholder="e.g. WS1"></label>
-          </div>
-          <button class="btn primary" type="submit">Generate</button>
-        </form>
-        <form id="addForm" class="stack">
-          <h3>Add a specific ID</h3>
-          <div class="row" style="align-items:flex-end">
-            <label class="field" style="flex:1;min-width:120px"><span>ID</span><input type="text" name="code" required pattern="[A-Za-z0-9_\\-]{3,40}" title="3–40 letters, digits, - or _"></label>
-            <label class="field" style="flex:1;min-width:120px"><span>Label (optional)</span><input type="text" name="label" placeholder="e.g. name or role"></label>
-          </div>
-          <button class="btn" type="submit">Add ID</button>
-        </form>
-      </div>
-    </div>
     <div class="card">
       <div class="section-head">
-        <div><h2>Participants</h2><p>${A.participants.length} IDs. Labels are only visible to admins.</p></div>
+        <div><h2>Participants</h2><p>${A.participants.length} IDs. Participants choose their own ID on the survey page; it appears here the first time it is used. Labels are only shown here.</p></div>
         <span class="spacer"></span>
         <button class="btn sm" id="copyAll" type="button">Copy all links</button>
         <button class="btn sm" id="dlP" type="button">Download list (CSV)</button>
@@ -446,31 +377,9 @@ function renderParticipants(body) {
             </tr>`).join('')}
           </tbody>
         </table>
-      </div>` : '<p class="notice">No participant IDs yet. Generate some above.</p>'}
+      </div>` : '<p class="notice">No participants yet. Share the survey link; IDs show up here once people start.</p>'}
     </div>`;
 
-  document.getElementById('genForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const count = Math.max(1, Math.min(200, Number(f.get('count')) || 0));
-    const prefix = String(f.get('prefix') || '').trim().replace(/[^A-Za-z0-9_-]/g, '').toUpperCase();
-    const existing = new Set(A.participants.map((p) => p.code.toUpperCase()));
-    const rows = [];
-    while (rows.length < count) {
-      const code = (prefix ? prefix + '-' : '') + randomCode();
-      if (!existing.has(code)) { existing.add(code); rows.push({ code }); }
-    }
-    const { error } = await sb.from('arch_participants').insert(rows);
-    if (error) return toast('Could not create IDs: ' + error.message);
-    await loadAll(); renderTab(); toast(`${count} IDs created`);
-  });
-  document.getElementById('addForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const { error } = await sb.from('arch_participants').insert({ code: String(f.get('code')).trim(), label: String(f.get('label') || '').trim() });
-    if (error) return toast(error.code === '23505' ? 'That ID already exists' : 'Could not add ID: ' + error.message);
-    await loadAll(); renderTab(); toast('ID added');
-  });
   document.getElementById('copyAll').onclick = () => {
     if (!A.participants.length) return toast('No IDs yet');
     copyText(A.participants.map((p) => `${p.code}\t${p.label}\t${surveyLink(p.code)}`).join('\n'), 'All links copied (ID, label, link)');
@@ -682,5 +591,4 @@ async function saveEditor(cfg, rerender) {
   toast(`${cfg.title} saved`);
 }
 
-sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') renderLogin(); });
 start();

@@ -142,7 +142,7 @@ label.field > span { display: block; font-size: 13px; font-weight: 600; color: v
 
 .landing { max-width: 440px; margin: 10vh auto 0; }
 .landing .id-form { display: flex; gap: 10px; margin-top: 18px; }
-.id-form input { text-transform: uppercase; letter-spacing: .04em; }
+
 
 .legend { margin-bottom: 20px; }
 .legend summary { cursor: pointer; font-weight: 650; list-style: none; display: flex; align-items: center; gap: 8px; }
