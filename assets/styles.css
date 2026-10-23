@@ -141,8 +141,8 @@ label.field > span { display: block; font-size: 13px; font-weight: 600; color: v
 .who button { background: none; border: 0; color: var(--accent-ink); cursor: pointer; padding: 0; text-decoration: underline; font-size: inherit; }
 
 .landing { max-width: 440px; margin: 10vh auto 0; }
-.landing form { display: flex; gap: 10px; margin-top: 18px; }
-.landing input { text-transform: uppercase; letter-spacing: .04em; }
+.landing .id-form { display: flex; gap: 10px; margin-top: 18px; }
+.id-form input { text-transform: uppercase; letter-spacing: .04em; }
 
 .legend { margin-bottom: 20px; }
 .legend summary { cursor: pointer; font-weight: 650; list-style: none; display: flex; align-items: center; gap: 8px; }
@@ -308,7 +308,7 @@ td input[type=text] { padding: 5px 8px; border-radius: 7px; min-width: 120px; }
   .card { padding: 16px; }
   .arch-btn .nm { display: none; }
   .arch-btn .badge { min-width: 30px; height: 30px; font-size: 13px; }
-  .landing form { flex-direction: column; }
+  .landing .id-form { flex-direction: column; }
   .edit-row { grid-template-columns: minmax(0, 1fr); }
   .edit-row .badge { display: none; }
   .edit-row .actions { justify-content: flex-start; }

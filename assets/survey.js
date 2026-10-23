@@ -11,7 +11,7 @@ function renderLanding(error = '', prefill = '') {
         <h1>Welcome</h1>
         <p>Please enter the personal ID you received to start.</p>
       </div>
-      <form id="idForm">
+      <form id="idForm" class="id-form">
         <input type="text" id="idInput" name="id" autocomplete="off" spellcheck="false"
           placeholder="Your ID" aria-label="Your ID" value="${esc(prefill)}" required>
         <button class="btn primary" type="submit">Continue</button>
