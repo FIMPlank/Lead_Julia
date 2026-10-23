@@ -170,7 +170,7 @@ function renderResults(body) {
 
   body.innerHTML = `
     <div class="tiles">
-      <div class="card tile"><div class="k">Invited IDs</div><div class="v">${A.participants.length}</div></div>
+      <div class="card tile"><div class="k">Participants</div><div class="v">${A.participants.length}</div></div>
       <div class="card tile"><div class="k">Started</div><div class="v">${started}</div></div>
       <div class="card tile"><div class="k">Submitted</div><div class="v">${submitted}</div></div>
       <div class="card tile"><div class="k">In this view</div><div class="v">${codes.size}</div></div>
