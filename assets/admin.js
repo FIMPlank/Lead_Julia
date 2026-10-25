@@ -501,7 +501,7 @@ function renderEditor(root, cfg) {
               ? `<label class="field"><span>${l}</span><textarea data-f="${f}" rows="2">${esc(it[f])}</textarea></label>`
               : type === 'checkbox'
                 ? `<label class="check small"><input type="checkbox" data-f="${f}" ${it[f] ? 'checked' : ''}> ${l}</label>`
-                : `<label class="field"><span>${l}</span><input type="text" data-f="${f}" value="${esc(it[f])}"></label>`).join('')}
+                : `<label class="field"><span>${l}</span><input type="text" data-f="${f}" maxlength="${NAME_MAX}" value="${esc(it[f])}"></label>`).join('')}
           </div>
           <div class="actions">
             <button class="btn sm" data-mv="-1" type="button" ${i === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
@@ -510,6 +510,7 @@ function renderEditor(root, cfg) {
           </div>
         </div>`).join('')}
     </div>
+    <p class="notice error" data-err role="alert" style="margin-top:14px" hidden></p>
     <div class="row" style="margin-top:14px">
       <button class="btn" data-add type="button">+ ${cfg.addText}</button>
       <span class="spacer"></span>
@@ -536,7 +537,7 @@ function renderEditor(root, cfg) {
   });
   root.querySelector('[data-add]').addEventListener('click', () => { items.push(cfg.blank()); rerender(); });
   root.querySelector('[data-reset]')?.addEventListener('click', () => { delete A.drafts[cfg.key]; rerender(); });
-  root.querySelector('[data-save]').addEventListener('click', () => saveEditor(cfg, rerender));
+  root.querySelector('[data-save]').addEventListener('click', () => saveEditor(cfg, rerender, root));
 
   function markDirty() {
     const btn = root.querySelector('[data-save]');
@@ -547,11 +548,20 @@ function renderEditor(root, cfg) {
   }
 }
 
-async function saveEditor(cfg, rerender) {
+// Matches the length checks on arch_archetypes.name and arch_cases.title.
+const NAME_MAX = 300;
+
+async function saveEditor(cfg, rerender, root) {
+  const errEl = root.querySelector('[data-err]');
+  const fail = (msg) => { errEl.textContent = msg; errEl.hidden = false; };
+  errEl.hidden = true;
   const items = A.drafts[cfg.key];
-  const main = cfg.fields[0][0];
-  if (items.some((it) => !String(it[main] || '').trim())) return toast(`Every item needs a ${cfg.fields[0][1].toLowerCase()}`);
-  if (cfg.key === 'archetypes' && items.length < 2) return toast('You need at least two archetypes');
+  const [main, mainLabel] = cfg.fields[0];
+  const empty = items.findIndex((it) => !String(it[main] || '').trim());
+  if (empty >= 0) return fail(`${cfg.label(empty)}: please enter a ${mainLabel.toLowerCase()}.`);
+  const long = items.findIndex((it) => String(it[main] || '').trim().length > NAME_MAX);
+  if (long >= 0) return fail(`${cfg.label(long)}: the ${mainLabel.toLowerCase()} is too long (max ${NAME_MAX} characters). Put longer text in the description.`);
+  if (cfg.key === 'archetypes' && items.length < 2) return fail('You need at least two archetypes.');
 
   const keep = new Set(items.filter((x) => x.id).map((x) => x.id));
   const removed = A[cfg.key].filter((x) => !keep.has(x.id));
@@ -584,7 +594,7 @@ async function saveEditor(cfg, rerender) {
       if (error) throw error;
     }
   } catch (err) {
-    return toast('Could not save: ' + err.message);
+    return fail('Could not save. Details: ' + err.message);
   }
   await loadAll();
   rerender();
